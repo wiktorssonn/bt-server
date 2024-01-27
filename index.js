@@ -8,10 +8,36 @@ app.use(cors({
     origin: 'http://localhost:3000'
 }));
 
-app.get('/', async (req, res) => {
+// GET USERS
+app.get('/users', async (req, res) => {
     try {
         const result = await db.query('SELECT * FROM person');
         res.json(result.rows);
+    } catch (err) {
+        console.error('Error: ', err);
+        res.status(500).send('Internal Server Error');
+    }
+})
+
+// REGISTER
+app.post('/register', async (req, res) => {
+    const { email, password } = req.body;
+    if (!email || !password) {
+        return {
+            code: 400,
+            message: 'Invalid body'
+        }
+    }
+    try {
+        const existingUser = await db.query("SELECT * FROM person WHERE email = $1", [email]);
+        if (existingUser.rows && existingUser.rows === 0) {
+            res.status(400).json({ message: "Email already in use!", data: null });
+        };
+
+        await db.query("INSERT INTO person (email, password, created_at) VALUES ($1, $2, $3)", [email, password, new Date()]);
+
+        res.status(200).json({ message: 'User created', data: null })
+        
     } catch (err) {
         console.error('Error: ', err);
         res.status(500).send('Internal Server Error');
